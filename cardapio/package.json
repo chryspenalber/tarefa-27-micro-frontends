@@ -3,13 +3,20 @@
   "version": "0.1.0",
   "private": true,
     "scripts": {
-    "dev": "next dev -p 3001",
-    "build": "next build",
+    "dev": "set NEXT_PRIVATE_LOCAL_WEBPACK=true && next dev -p 3001",
+    "build": "set NEXT_PRIVATE_LOCAL_WEBPACK=true && next build",
     "start": "next start -p 3001"
   },
   "dependencies": {
+    "@module-federation/nextjs-mf": "8.8.54",
     "next": "15.5.7",
     "react": "19.1.2",
     "react-dom": "19.1.2"
+  },
+  "devDependencies": {
+    "webpack": "5.101.0"
+  },
+  "overrides": {
+    "enhanced-resolve": "5.20.1"
   }
 }

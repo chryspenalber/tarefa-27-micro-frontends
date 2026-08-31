@@ -56,6 +56,46 @@ instalado localmente. O script usa `set VAR=true && next dev`, que só funciona 
 Windows. A variante com `export` fica documentada no README, em vez de instalar
 `cross-env`.
 
+**Module Federation, versões que funcionam juntas.** Foram necessárias três descobertas
+até o micro Cardápio subir com o plugin ativo.
+
+O Next 15.5.7 tem um plugin interno que trata `resolveContext.stack` como um `Set` e
+chama `.delete()` nele. A partir da versão 5.21.0 do `enhanced-resolve`, usado pelo
+webpack, esse `stack` deixou de ser um `Set`, o que provoca
+`stack?.delete is not a function`. O erro só aparece com
+`NEXT_PRIVATE_LOCAL_WEBPACK=true`, porque aí o Next passa a usar o webpack da pasta em
+vez da cópia interna dele. Escolher outra versão do webpack não resolve, já que toda a
+linha 5.x aceita `^5.17.x`, faixa que inclui as versões quebradas. A saída foi fixar o
+`enhanced-resolve` em 5.20.1 pelo campo `overrides` do npm, que força a versão de uma
+dependência indireta.
+
+A versão 8.8.74 do plugin, a mais recente, falha na build com um `import` de
+`node:module` que o webpack não empacota para o navegador.
+
+Na versão 8.8.27 o compartilhamento de React está comentado no código do próprio plugin,
+em `DEFAULT_SHARE_SCOPE`. Sem isso o app e o runtime do plugin carregam duas cópias de
+React, e a página fica branca com `Invalid hook call` e
+`Cannot read properties of null (reading 'useLayoutEffect')`. Declarar `shared` à mão não
+corrige, testado com e sem `singleton`, com `eager` e aplicando o plugin só no cliente.
+Com React 18 o erro é o mesmo, então não é questão de versão do React.
+
+A 8.8.54 tem o React compartilhado e não tem o `node:module`. Conjunto validado em modo
+dev e em build de produção: Next 15.5.7, React e React DOM 19.1.2, plugin 8.8.54, webpack
+5.101.0 como dependência de desenvolvimento e `enhanced-resolve` 5.20.1 no `overrides`.
+
+**Sem bloco `shared` no `next.config.mjs`.** O plugin já compartilha React internamente.
+Declarar `shared` à mão faz a build falhar na geração das páginas de erro, com
+`Cannot read properties of null (reading 'useContext')`.
+
+**Aumento dos avisos do `npm audit`.** Os avisos passaram de 3 para 14 depois do plugin,
+por causa da árvore de dependências que ele traz. Fica registrado como limitação
+assumida, já que o `npm audit fix` desfaz as versões fixas de que o projeto depende.
+
+**Next 15.5.7 está deprecado.** Todas as versões de 15.5.0 a 15.5.8 estão marcadas como
+deprecadas no npm por falha de segurança, corrigida a partir da 15.5.9. O projeto
+permanece na 15.5.7 por decisão de escopo, para não reabrir a validação do conjunto de
+versões. Fica registrado como limitação conhecida.
+
 ## Testes feitos
 
 **Micro Cardápio isolado, porta 3001.** Os cinco pratos aparecem com nome, descrição e
