@@ -127,6 +127,24 @@ Versões alinhadas com o cardápio: Next 15.5.7, React e React DOM 19.1.2. O
 `create-next-app` havia instalado React 19.1.0, atualizado para os dois micros
 compartilharem a mesma versão quando o container carregar os remotes.
 
+### Module Federation nos dois micros
+
+Cada micro expõe apenas o seu componente principal, não a página. As páginas `index`
+continuam existindo só para o teste isolado.
+
+| Micro | `name` | Exposto | `remoteEntry.js` |
+| --- | --- | --- | --- |
+| cardapio | cardapio | `./Cardapio` | `localhost:3001/_next/static/chunks/remoteEntry.js` |
+| pedido | pedido | `./Pedido` | `localhost:3002/_next/static/chunks/remoteEntry.js` |
+
+Nos dois, o `remoteEntry.js` foi aberto no navegador e responde com o JavaScript do
+runtime do Module Federation, incluindo o `attachShareScopeMap`, que é o mecanismo de
+compartilhamento de React.
+
+O console do DevTools ficou limpo nos dois, sem o `Invalid hook call` que aparecia com a
+versão anterior do plugin. O evento global foi disparado à mão no 3002 com o plugin ativo
+e o item apareceu uma vez só, confirmando que a federação não interferiu na comunicação.
+
 ## Ambiente
 
 Projeto dentro do OneDrive. Com três pastas `node_modules` sincronizando pode aparecer
