@@ -96,6 +96,18 @@ deprecadas no npm por falha de segurança, corrigida a partir da 15.5.9. O proje
 permanece na 15.5.7 por decisão de escopo, para não reabrir a validação do conjunto de
 versões. Fica registrado como limitação conhecida.
 
+**Wrappers com `React.lazy` no container.** O enunciado sugere `React.lazy` com
+`Suspense`, a aula usa `next/dynamic`. Cada micro tem um wrapper em
+`container/src/components` que faz o `React.lazy` e o `Suspense` internamente. A página
+importa esse wrapper com `next/dynamic` e `ssr: false`, porque o módulo remoto vem de
+outro servidor e não existe durante a renderização no servidor. Assim o padrão pedido
+pelo enunciado fica visível no código e o SSR não quebra.
+
+**Pasta do `remoteEntry` conforme o lado compilado.** O plugin publica o arquivo em
+`static/chunks` para o navegador e em `static/ssr` para o servidor. Por isso o
+`next.config.mjs` do container monta o endereço com `options.isServer ? "ssr" : "chunks"`.
+Sem essa troca, um dos lados busca um endereço que não existe.
+
 ## Testes feitos
 
 **Micro Cardápio isolado, porta 3001.** Os cinco pratos aparecem com nome, descrição e
@@ -126,6 +138,21 @@ cresce no fim, nunca reordena nem remove itens, o que torna o índice estável n
 Versões alinhadas com o cardápio: Next 15.5.7, React e React DOM 19.1.2. O
 `create-next-app` havia instalado React 19.1.0, atualizado para os dois micros
 compartilharem a mesma versão quando o container carregar os remotes.
+
+### Os três rodando juntos
+
+Ordem de inicialização: cardápio e pedido primeiro, container por último, porque ele
+busca o `remoteEntry.js` dos dois ao carregar a página. Cada um ocupa um terminal.
+
+No `localhost:3000` os dois micros aparecem carregados por Module Federation, o cardápio
+com os cinco pratos e o pedido com a mensagem de vazio. Três cliques em "Adicionar ao
+pedido" resultaram em três itens na lista do pedido, na ordem dos cliques, com o mesmo
+prato aparecendo duas vezes por ter sido clicado duas vezes. Console do DevTools limpo.
+
+Isso confirma o caminho completo: o componente do cardápio, servido pela porta 3001,
+dispara o evento global dentro da página do container, e o componente do pedido, servido
+pela porta 3002, escuta esse evento e atualiza o próprio estado. Os dois micros nunca se
+importam diretamente.
 
 ### Module Federation nos dois micros
 
