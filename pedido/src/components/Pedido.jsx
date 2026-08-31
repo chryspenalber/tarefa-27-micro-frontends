@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import ItemPedido from "./ItemPedido";
 
 export default function Pedido() {
-  // Lista de pratos que o usuario ja adicionou
   const [itens, setItens] = useState([]);
 
   useEffect(() => {

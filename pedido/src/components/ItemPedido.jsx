@@ -2,9 +2,9 @@
 export default function ItemPedido({ prato }) {
   return (
     // O <ul> em volta é responsabilidade do Pedido.jsx
-    <li style={{ marginBottom: 12 }}>
+    <li>
       <strong>{prato.nome}</strong>
-      <p style={{ margin: "4px 0 0" }}>{prato.descricao}</p>
+      <p>{prato.descricao}</p>
     </li>
   );
 }

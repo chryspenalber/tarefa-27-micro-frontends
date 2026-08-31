@@ -3,7 +3,7 @@ import Pedido from "@/components/Pedido";
 
 export default function Home() {
   return (
-    <main style={{ padding: 24, fontFamily: "sans-serif" }}>
+    <main>
       <h1>Micro Pedido, teste isolado</h1>
       <Pedido />
     </main>
