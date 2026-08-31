@@ -69,3 +69,27 @@ Projeto dentro do OneDrive. Com tres pastas `node_modules` sincronizando pode ap
 erro de arquivo bloqueado no `npm install`. Se acontecer, pausar a sincronizacao.
 
 Terminal em uso: PowerShell.
+
+### Micro Pedido isolado, porta 3002
+
+O componente `Pedido` escuta o evento global `adicionarAoPedido` e acumula os pratos
+recebidos em `e.detail`. O `ItemPedido` só recebe o prato por props e exibe nome e
+descrição, sem estado próprio.
+
+Com a lista vazia aparece a mensagem "Nenhum item adicionado ainda.".
+
+O evento foi disparado à mão no console do DevTools:
+
+`window.dispatchEvent(new CustomEvent("adicionarAoPedido", { detail: { id: 1, nome: "Prego no Pão", descricao: "teste" } }));`
+
+Dois disparos resultaram em dois itens na lista, confirmando que o `removeEventListener`
+no retorno do `useEffect` evita o listener duplicado do `reactStrictMode` em
+desenvolvimento. Sem essa limpeza, cada clique adicionaria o item duas vezes.
+
+O `padding` e a fonte definidos na página de teste não aparecem no navegador, porque o
+`globals.css` do Next entra depois na ordem de estilos. É só aparência da página de teste
+isolado, não afeta o componente que vai para o container.
+
+Versões alinhadas com o cardápio: Next 15.5.7, React e React DOM 19.1.2. O
+`create-next-app` havia instalado React 19.1.0, atualizado para os dois micros
+compartilharem a mesma versão quando o container carregar os remotes.
