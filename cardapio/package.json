@@ -2,9 +2,9 @@
   "name": "cardapio",
   "version": "0.1.0",
   "private": true,
-    "scripts": {
-    "dev": "set NEXT_PRIVATE_LOCAL_WEBPACK=true && next dev -p 3001",
-    "build": "set NEXT_PRIVATE_LOCAL_WEBPACK=true && next build",
+  "scripts": {
+    "dev": "cross-env NEXT_PRIVATE_LOCAL_WEBPACK=true next dev -p 3001",
+    "build": "cross-env NEXT_PRIVATE_LOCAL_WEBPACK=true next build",
     "start": "next start -p 3001"
   },
   "dependencies": {
@@ -14,6 +14,7 @@
     "react-dom": "19.1.2"
   },
   "devDependencies": {
+    "cross-env": "7.0.3",
     "webpack": "5.101.0"
   },
   "overrides": {
