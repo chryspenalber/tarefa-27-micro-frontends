@@ -1,0 +1,49 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: var(--creme);
+  border: 1px solid var(--azul);
+  border-radius: 4px;
+}
+
+.nome {
+  margin: 0;
+  color: var(--azul);
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.descricao {
+  margin: 0;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  flex-grow: 1;
+}
+
+.botao {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  background-color: var(--laranja);
+  border: none;
+  border-radius: 3px;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background-color 0.15s;
+}
+
+.botao:hover {
+  background-color: #bf4f1d;
+}
+
+.botao:focus-visible {
+  outline: 2px solid var(--azul);
+  outline-offset: 2px;
+}
