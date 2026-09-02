@@ -1,6 +1,5 @@
-// Pagina de teste isolado do micro Cardapio.
-// Serve para rodar o micro sozinho na porta 3001, antes da integracao
-// via Module Federation com o container.
+// Página de teste do micro Cardápio rodando sozinho na 3001,
+// antes da integração via Module Federation com o container.
 import Cardapio from "@/components/Cardapio";
 
 export default function Home() {

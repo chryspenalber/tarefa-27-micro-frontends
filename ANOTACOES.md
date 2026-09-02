@@ -40,7 +40,7 @@ não usa.
 | Dados dos pratos    | array de strings          | objetos com nome e descrição                   |
 | Componentes         | JSX solto dentro do `map` | componente com props                           |
 | Import no container | `next/dynamic`            | `React.lazy` e `Suspense` num wrapper          |
-| `cross-env`         | usa                       | não usar, o enunciado pede evitar dependências |
+| `cross-env`         | usa                       | usar, motivo registrado abaixo                 |
 
 **React.lazy.** O enunciado sugere `React.lazy` com `Suspense`, a aula usa
 `next/dynamic`. A saída é um wrapper por micro em `container/src/components`, que faz o
@@ -51,10 +51,7 @@ não usa.
 retorna o `removeEventListener`. Sem essa limpeza, com `reactStrictMode: true`, o React
 monta o efeito duas vezes em desenvolvimento e cada clique duplica o item.
 
-**Script de dev no Windows.** O plugin exige `NEXT_PRIVATE_LOCAL_WEBPACK=true` e webpack
-instalado localmente. O script usa `set VAR=true && next dev`, que só funciona no cmd do
-Windows. A variante com `export` fica documentada no README, em vez de instalar
-`cross-env`.
+**Script de dev com cross-env**. O plugin exige NEXT_PRIVATE_LOCAL_WEBPACK=true e webpack instalado localmente. O set VAR=true && next dev só define a variável no cmd do Windows. No bash, set faz outra coisa, define parâmetros posicionais, e devolve sucesso, então o next dev roda sem a variável e sem erro visível. Nesse caso o Next usa a cópia interna de webpack e o Module Federation não funciona. Passei a usar o cross-env, que traduz a definição da variável para o sistema em uso. É dependência de desenvolvimento, não entra no bundle, então não conflita com a dica do enunciado sobre evitar dependências externas. Confirmado abrindo o remoteEntry.js do cardápio no navegador, que responde com o runtime do plugin.
 
 **Module Federation, versões que funcionam juntas.** Foram necessárias três descobertas
 até o micro Cardápio subir com o plugin ativo.
