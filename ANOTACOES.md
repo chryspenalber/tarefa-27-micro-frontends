@@ -1,178 +1,95 @@
 # Anotações — Tarefa 27, Micro Frontends
 
-## Estrutura
+Onde eu registro as decisões que tomei, os erros que apareceram e os testes que fiz. A explicação da estrutura, da comunicação e de como executar está no `README.md`.
 
-| App       | Papel                                  | Porta |
-| --------- | -------------------------------------- | ----- |
-| container | Importa os dois micros                 | 3000  |
-| cardapio  | Lista de pratos com botão de adicionar | 3001  |
-| pedido    | Mostra os itens escolhidos             | 3002  |
-
-Monorepo com um único repositório Git na raiz. O `.git` criado pelo `create-next-app`
-dentro de cada app é removido para não virar repositório aninhado.
+---
 
 ## Decisões
 
-**Next.js em vez de React puro com Webpack.** O enunciado exige React, Webpack Module
-Federation e JavaScript. A parte prática da aula usa Next.js e o próprio enunciado
-recomenda Next 12 a 15 com Pages Router, então seguimos por aí.
+**Next.js em vez de React puro com Webpack.** O enunciado exige React, Webpack Module Federation e JavaScript, e recomenda Next entre as versões 12 e 15 com Pages Router.
 
-**Versões.** Next 15.5.7, React e React DOM 19.1.2, Pages Router, sem Turbopack, sem
-TypeScript, sem ESLint, sem Tailwind, com pasta `src` e alias `@/*`.
+**Versões.** Next 15.5.7, React e React DOM 19.1.2, Pages Router, sem Turbopack, sem TypeScript, sem ESLint, sem Tailwind, com pasta `src` e alias `@/*`.
 
-**Turbopack desligado.** O Module Federation é um plugin de Webpack. Com Turbopack o
-plugin não roda.
+**Turbopack desligado.** O Module Federation é um plugin de Webpack. Com Turbopack o plugin não roda.
 
-**CVE-2025-66478.** O `create-next-app` instalou o Next 15.5.3, com essa falha crítica.
-Ela atinge apenas App Router com Server Components, então o projeto nunca esteve
-exposto, mas atualizamos para 15.5.7 assim mesmo.
+**Um único repositório Git na raiz.** O `.git` criado pelo create-next-app` dentro de cada app foi removido, para não virar repositório aninhado.
 
-**Três avisos altos no `npm audit`, deixados de propósito.** O `npm audit fix` levaria o
-Next para a versão 16, incompatível com Module Federation. Os avisos são de App Router,
-Server Actions, Middleware, Image Optimizer, postcss e sharp, recursos que este projeto
-não usa.
+**Wrappers com `React.lazy` no container.** O enunciado sugere `React.lazy` com `Suspense`. Cada micro tem um wrapper em `container/src/components` que faz o `React.lazy` e o `Suspense` internamente, e a página importa esse wrapper com `next/dynamic` e `ssr: false`, porque o módulo remoto só existe no navegador. Assim o padrão pedido pelo enunciado fica visível no código e o SSR não quebra.
 
-**Divergências da aula, porque o enunciado tem preferência.**
+**Limpeza do listener no micro Pedido.** O `useEffect` que registra o listener retorna o `removeEventListener`. Sem essa limpeza, com `reactStrictMode: true`, o React monta o efeito duas vezes em desenvolvimento e cada clique duplica o item.
 
-| Ponto               | Aula                      | Nossa decisão                                  |
-| ------------------- | ------------------------- | ---------------------------------------------- |
-| Nomes dos micros    | catalogo, carrinho        | cardapio, pedido                               |
-| Dados dos pratos    | array de strings          | objetos com nome e descrição                   |
-| Componentes         | JSX solto dentro do `map` | componente com props                           |
-| Import no container | `next/dynamic`            | `React.lazy` e `Suspense` num wrapper          |
-| `cross-env`         | usa                       | usar, motivo registrado abaixo                 |
+**`key` pelo índice na lista do pedido.** No pedido o mesmo prato pode ser adicionado mais de uma vez, então o `id` deixa de ser único ali. A lista só cresce no fim, nunca reordena nem remove itens, o que torna o índice estável nesse caso.
 
-**React.lazy.** O enunciado sugere `React.lazy` com `Suspense`, a aula usa
-`next/dynamic`. A saída é um wrapper por micro em `container/src/components`, que faz o
-`React.lazy` e o `Suspense` internamente. A página do container importa esse wrapper com
-`next/dynamic` e `ssr: false`, porque o módulo remoto só existe no navegador.
+**Script de dev com `cross-env`.** O plugin exige `NEXT_PRIVATE_LOCAL_WEBPACK=true` e webpack instalado localmente. O `set VAR=true && next dev` só define a variável no cmd do Windows. No bash, `set` faz outra coisa, define parâmetros posicionais, e devolve sucesso, então o `next dev` roda sem a variável e sem erro visível. Nesse caso o Next usa a cópia interna de webpack e o Module Federation não funciona. O `cross-env` traduz a definição da variável para o sistema em uso. É dependência de desenvolvimento, não entra no bundle, então não conflita com a dica do enunciado sobre evitar dependências externas.
+Confirmei abrindo o `remoteEntry.js` do cardápio no navegador, que responde com o runtime do plugin.
 
-**Bug herdado da aula, corrigido no micro Pedido.** O `useEffect` que registra o listener
-retorna o `removeEventListener`. Sem essa limpeza, com `reactStrictMode: true`, o React
-monta o efeito duas vezes em desenvolvimento e cada clique duplica o item.
-
-**Script de dev com cross-env**. O plugin exige NEXT_PRIVATE_LOCAL_WEBPACK=true e webpack instalado localmente. O set VAR=true && next dev só define a variável no cmd do Windows. No bash, set faz outra coisa, define parâmetros posicionais, e devolve sucesso, então o next dev roda sem a variável e sem erro visível. Nesse caso o Next usa a cópia interna de webpack e o Module Federation não funciona. Passei a usar o cross-env, que traduz a definição da variável para o sistema em uso. É dependência de desenvolvimento, não entra no bundle, então não conflita com a dica do enunciado sobre evitar dependências externas. Confirmado abrindo o remoteEntry.js do cardápio no navegador, que responde com o runtime do plugin.
-
-**Module Federation, versões que funcionam juntas.** Foram necessárias três descobertas
-até o micro Cardápio subir com o plugin ativo.
-
-O Next 15.5.7 tem um plugin interno que trata `resolveContext.stack` como um `Set` e
-chama `.delete()` nele. A partir da versão 5.21.0 do `enhanced-resolve`, usado pelo
-webpack, esse `stack` deixou de ser um `Set`, o que provoca
-`stack?.delete is not a function`. O erro só aparece com
-`NEXT_PRIVATE_LOCAL_WEBPACK=true`, porque aí o Next passa a usar o webpack da pasta em
-vez da cópia interna dele. Escolher outra versão do webpack não resolve, já que toda a
-linha 5.x aceita `^5.17.x`, faixa que inclui as versões quebradas. A saída foi fixar o
-`enhanced-resolve` em 5.20.1 pelo campo `overrides` do npm, que força a versão de uma
-dependência indireta.
-
-A versão 8.8.74 do plugin, a mais recente, falha na build com um `import` de
-`node:module` que o webpack não empacota para o navegador.
-
-Na versão 8.8.27 o compartilhamento de React está comentado no código do próprio plugin,
-em `DEFAULT_SHARE_SCOPE`. Sem isso o app e o runtime do plugin carregam duas cópias de
-React, e a página fica branca com `Invalid hook call` e
-`Cannot read properties of null (reading 'useLayoutEffect')`. Declarar `shared` à mão não
-corrige, testado com e sem `singleton`, com `eager` e aplicando o plugin só no cliente.
-Com React 18 o erro é o mesmo, então não é questão de versão do React.
-
-A 8.8.54 tem o React compartilhado e não tem o `node:module`. Conjunto validado em modo
-dev e em build de produção: Next 15.5.7, React e React DOM 19.1.2, plugin 8.8.54, webpack
-5.101.0 como dependência de desenvolvimento e `enhanced-resolve` 5.20.1 no `overrides`.
+**Pasta do `remoteEntry` conforme o lado compilado.** O plugin publica o arquivo em `static/chunks` para o navegador e em `static/ssr` para o servidor. Por isso o `next.config.mjs` do container monta o endereço com `options.isServer ? "ssr" : "chunks"`. Sem essa troca, um dos lados busca um endereço que não existe.
 
 **Sem bloco `shared` no `next.config.mjs`.** O plugin já compartilha React internamente.
 Declarar `shared` à mão faz a build falhar na geração das páginas de erro, com
 `Cannot read properties of null (reading 'useContext')`.
 
-**Aumento dos avisos do `npm audit`.** Os avisos passaram de 3 para 14 depois do plugin,
-por causa da árvore de dependências que ele traz. Fica registrado como limitação
-assumida, já que o `npm audit fix` desfaz as versões fixas de que o projeto depende.
+---
 
-**Next 15.5.7 está deprecado.** Todas as versões de 15.5.0 a 15.5.8 estão marcadas como
-deprecadas no npm por falha de segurança, corrigida a partir da 15.5.9. O projeto
-permanece na 15.5.7 por decisão de escopo, para não reabrir a validação do conjunto de
-versões. Fica registrado como limitação conhecida.
+## Module Federation, versões que funcionam juntas
 
-**Wrappers com `React.lazy` no container.** O enunciado sugere `React.lazy` com
-`Suspense`, a aula usa `next/dynamic`. Cada micro tem um wrapper em
-`container/src/components` que faz o `React.lazy` e o `Suspense` internamente. A página
-importa esse wrapper com `next/dynamic` e `ssr: false`, porque o módulo remoto vem de
-outro servidor e não existe durante a renderização no servidor. Assim o padrão pedido
-pelo enunciado fica visível no código e o SSR não quebra.
+Precisei de três descobertas até o micro Cardápio subir com o plugin ativo.
 
-**Pasta do `remoteEntry` conforme o lado compilado.** O plugin publica o arquivo em
-`static/chunks` para o navegador e em `static/ssr` para o servidor. Por isso o
-`next.config.mjs` do container monta o endereço com `options.isServer ? "ssr" : "chunks"`.
-Sem essa troca, um dos lados busca um endereço que não existe.
+**`enhanced-resolve` fixado em 5.20.1.** O Next 15.5.7 tem um plugin interno que trata `resolveContext.stack` como um `Set` e chama `.delete()` nele. A partir da versão 5.21.0 do `enhanced-resolve`, usado pelo webpack, esse `stack` deixou de ser um `Set`, o que provoca `stack?.delete is not a function`. O erro só aparece com
+`NEXT_PRIVATE_LOCAL_WEBPACK=true`, porque aí o Next passa a usar o webpack da pasta em vez da cópia interna dele. Tentei trocar a versão do webpack e não resolveu, porque toda a linha 5.x aceita `^5.17.x`, faixa que inclui as versões quebradas. Acabei fixando o `enhanced-resolve` pelo campo `overrides` do npm, que força a versão de uma dependência
+indireta.
+
+**Plugin 8.8.74 não serve.** A versão mais recente falha na build com um `import` de `node:module` que o webpack não empacota para o navegador.
+
+**Plugin 8.8.27 não serve.** Nessa versão o compartilhamento de React está comentado no código do próprio plugin, em `DEFAULT_SHARE_SCOPE`. Sem isso o app e o runtime do plugin
+carregam duas cópias de React, e a página fica branca com `Invalid hook call` e `Cannot read properties of null (reading 'useLayoutEffect')`. Achei que fosse configuração minha e tentei declarar `shared` à mão, com e sem `singleton`, com `eager` e aplicando o plugin só no cliente. Nada mudou. Testei também com React 18 e o erro foi o mesmo, o que descartou versão do React e me levou ao plugin.
+
+**Conjunto que funcionou.** Plugin 8.8.54, que tem o React compartilhado e não tem o `node:module`. Testei em modo dev e em build de produção com Next 15.5.7, React e React DOM 19.1.2, webpack 5.101.0 como dependência de desenvolvimento e `enhanced-resolve` 5.20.1 no `overrides`.
+
+---
+
+## Segurança e avisos do npm
+
+**CVE-2025-66478.** O `create-next-app` instalou o Next 15.5.3, com essa falha crítica.
+Ela atinge apenas App Router com Server Components, então o projeto nunca esteve exposto, mas atualizei para 15.5.7 assim mesmo.
+
+**Avisos do `npm audit`, de 3 para 14.** Subiram depois que instalei o plugin, por causa da árvore de dependências que ele traz. O `npm audit fix` desfaz as versões fixas de que o projeto depende, então deixei como está e registro aqui como limitação
+assumida.
+
+**Next 15.5.7 está deprecado.** Todas as versões de 15.5.0 a 15.5.8 estão marcadas como deprecadas no npm por falha de segurança, corrigida a partir da 15.5.9. A linha 15.5.x continua recebendo correções, e existe uma versão mais nova disponível para bump manual,
+sem passar para o Next 16. Deixei de fora para não reabrir a validação do conjunto de versões perto da entrega.
+
+---
 
 ## Testes feitos
 
-**Micro Cardápio isolado, porta 3001.** Os cinco pratos aparecem com nome, descrição e
-botão. O evento global foi testado no console com
-`window.addEventListener("adicionarAoPedido", (e) => console.log(e.detail));` e os cinco
-cliques logaram o objeto completo do prato.
+**Micro Cardápio isolado, porta 3001.** Os cinco pratos aparecem com nome, descrição e botão. Escutei o evento global no console com `window.addEventListener("adicionarAoPedido", (e) => console.log(e.detail));` e os cinco cliques logaram o objeto completo do prato.
 
-### Micro Pedido isolado, porta 3002
+**Micro Pedido isolado, porta 3002.** Com a lista vazia aparece a mensagem "Nenhum item adicionado ainda.". Disparei o evento à mão no console do DevTools:
 
-O componente `Pedido` escuta o evento global `adicionarAoPedido` e acumula os pratos
-recebidos em `e.detail`. O `ItemPedido` só recebe o prato por props e exibe nome e
-descrição, sem estado próprio.
+```js
+window.dispatchEvent(
+  new CustomEvent("adicionarAoPedido", {
+    detail: { id: 1, nome: "Prego no Pão", descricao: "teste" },
+  }),
+);
+```
 
-Com a lista vazia aparece a mensagem "Nenhum item adicionado ainda.".
+Dois disparos deram dois itens na lista, o que confirma que o `removeEventListener` no retorno do `useEffect` evita o listener duplicado do `reactStrictMode` em desenvolvimento.
 
-O evento foi disparado à mão no console do DevTools:
+O `ItemPedido` só recebe o prato por props e exibe nome e descrição, sem estado próprio.
 
-`window.dispatchEvent(new CustomEvent("adicionarAoPedido", { detail: { id: 1, nome: "Prego no Pão", descricao: "teste" } }));`
+**Versões alinhadas entre os micros.** O `create-next-app` havia instalado React 19.1.0 no pedido, e subi para 19.1.2 para os dois micros compartilharem a mesma versão quando o container carregar os remotes.
 
-Dois disparos resultaram em dois itens na lista, confirmando que o `removeEventListener`
-no retorno do `useEffect` evita o listener duplicado do `reactStrictMode` em
-desenvolvimento. Sem essa limpeza, cada clique adicionaria o item duas vezes.
+**`remoteEntry.js` dos dois micros.** Abri no navegador nos dois casos e o arquivo responde com o JavaScript do runtime do Module Federation, incluindo o `attachShareScopeMap`, que é o mecanismo de compartilhamento de React. Console do DevTools limpo nos dois, sem o `Invalid hook call` que aparecia com a versão anterior do plugin. Disparei o evento à mão no 3002 com o plugin ativo e o item apareceu uma vez só, confirmando que a federação não interferiu na comunicação.
 
-O `map` da lista usa o índice como `key`, e não o `id` do prato. No pedido o mesmo prato
-pode ser adicionado mais de uma vez, então o `id` deixa de ser único ali. A lista só
-cresce no fim, nunca reordena nem remove itens, o que torna o índice estável nesse caso.
+**Os três rodando juntos.** No `localhost:3000` os dois micros aparecem carregados por Module Federation, o cardápio com os cinco pratos e o pedido com a mensagem de vazio.
+Dei três cliques em "Adicionar ao pedido" e apareceram três itens na lista, na ordem dos cliques, com o mesmo prato duas vezes por eu ter clicado duas vezes nele. Console do DevTools limpo.
 
-Versões alinhadas com o cardápio: Next 15.5.7, React e React DOM 19.1.2. O
-`create-next-app` havia instalado React 19.1.0, atualizado para os dois micros
-compartilharem a mesma versão quando o container carregar os remotes.
+Isso fecha o caminho completo: o componente do cardápio, servido pela porta 3001, dispara o evento global dentro da página do container, e o componente do pedido, servido pela porta 3002, escuta esse evento e atualiza o próprio estado. Os dois micros nunca se importam diretamente.
 
-### Os três rodando juntos
-
-Ordem de inicialização: cardápio e pedido primeiro, container por último, porque ele
-busca o `remoteEntry.js` dos dois ao carregar a página. Cada um ocupa um terminal.
-
-No `localhost:3000` os dois micros aparecem carregados por Module Federation, o cardápio
-com os cinco pratos e o pedido com a mensagem de vazio. Três cliques em "Adicionar ao
-pedido" resultaram em três itens na lista do pedido, na ordem dos cliques, com o mesmo
-prato aparecendo duas vezes por ter sido clicado duas vezes. Console do DevTools limpo.
-
-Isso confirma o caminho completo: o componente do cardápio, servido pela porta 3001,
-dispara o evento global dentro da página do container, e o componente do pedido, servido
-pela porta 3002, escuta esse evento e atualiza o próprio estado. Os dois micros nunca se
-importam diretamente.
-
-### Module Federation nos dois micros
-
-Cada micro expõe apenas o seu componente principal, não a página. As páginas `index`
-continuam existindo só para o teste isolado.
-
-| Micro | `name` | Exposto | `remoteEntry.js` |
-| --- | --- | --- | --- |
-| cardapio | cardapio | `./Cardapio` | `localhost:3001/_next/static/chunks/remoteEntry.js` |
-| pedido | pedido | `./Pedido` | `localhost:3002/_next/static/chunks/remoteEntry.js` |
-
-Nos dois, o `remoteEntry.js` foi aberto no navegador e responde com o JavaScript do
-runtime do Module Federation, incluindo o `attachShareScopeMap`, que é o mecanismo de
-compartilhamento de React.
-
-O console do DevTools ficou limpo nos dois, sem o `Invalid hook call` que aparecia com a
-versão anterior do plugin. O evento global foi disparado à mão no 3002 com o plugin ativo
-e o item apareceu uma vez só, confirmando que a federação não interferiu na comunicação.
+---
 
 ## Ambiente
 
-Projeto dentro do OneDrive. Com três pastas `node_modules` sincronizando pode aparecer
-erro de arquivo bloqueado no `npm install`. Se acontecer, pausar a sincronização.
-
 Terminal em uso: PowerShell.
-
